@@ -17,20 +17,23 @@ Enable PCIe Active State Power Management (ASPM) on compatible devices to reduce
   sudo apt install pciutils
   
   # Install on RHEL/CentOS/Fedora:  
-  sudo dnf install pciutils
+  sudo dnf install pciutilsshell-auto-aspm
   ```
 
 ## Quick Start
 
 ```bash
 
-# 1. Preview what will be changed (safe, no modifications)
+# 1. Make scripts executable
+chmod +x autoaspm.sh restoreaspmbackup.sh 
+
+# 2. Preview what will be changed (safe, no modifications)
 sudo ./autoaspm.sh --dry-run
 
-# 2. Apply ASPM settings (creates automatic backup)
+# 3. Apply ASPM settings (creates automatic backup)
 sudo ./autoaspm.sh
 
-# 3. Optional: Restore original settings if needed (or reboot )
+# 4. Optional: Restore original settings if needed (or reboot )
 sudo ./restoreaspmbackup.sh --list
 sudo ./restoreaspmbackup.sh /tmp/aspm_backup_YYYYMMDD_HHMMSS
 ```
