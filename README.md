@@ -4,7 +4,7 @@
 
 ## Overview
 
-Enable PCIe Active State Power Management (ASPM) on compatible devices to reduce system power consumption. The script scans PCIe devices, creates backups, and enables supported ASPM link states (L0s/L1) in device configuration space. It does not change CPU governors or BIOS settings.
+Enable PCIe Active State Power Management (ASPM) on compatible devices to reduce system power consumption. The script scans PCIe devices, and enables supported ASPM link states (L0s/L1) in device configuration space. It does not change CPU governors or BIOS settings.
 
 
 ## Requirements
@@ -25,24 +25,13 @@ Enable PCIe Active State Power Management (ASPM) on compatible devices to reduce
 ```bash
 
 # 1. Make scripts executable
-chmod +x autoaspm.sh restoreaspmbackup.sh 
+chmod +x autoaspm.sh 
 
 # 2. Preview what will be changed (safe, no modifications)
 sudo ./autoaspm.sh --dry-run
 
-# 3. Apply ASPM settings (creates automatic backup)
+# 3. Apply ASPM settings
 sudo ./autoaspm.sh
-
-# 4. Optional: Restore original settings if needed (or reboot )
-sudo ./restoreaspmbackup.sh --list
-sudo ./restoreaspmbackup.sh /tmp/aspm_backup_YYYYMMDD_HHMMSS
-```
-
-### Advanced Options
-```bash
-sudo ./autoaspm.sh --backup-dir /home/user/aspm-backups  # Custom backup location
-sudo ./autoaspm.sh --restore /tmp/backup.file            # Restore from backup
-```
 
 ## Persistence (run at boot)
 
@@ -64,21 +53,6 @@ sudo systemctl enable --now auto-aspm.service
 Notes:
 - If some PCIe devices are not probed by the time the unit runs, add a small delay with `ExecStartPre=/bin/sleep 3` or tune `After=` to wait for relevant services. Alternatively, run the script from a udev rule when devices appear.
 - Test with `--dry-run` before enabling the unit.
-
-### Backup and Restore
-```bash
-# List available backups
-sudo ./restoreaspmbackup.sh --list
-
-# Restore all devices from backup directory
-sudo ./restoreaspmbackup.sh /tmp/aspm_backup_20250925_143022
-
-# Restore specific device
-sudo ./restoreaspmbackup.sh --device 00:1f.2 /tmp/aspm_backup_*
-
-# Force restore without prompts
-sudo ./restoreaspmbackup.sh --force /tmp/aspm_backup_*
-```
 
 ## Expected Results
 
@@ -125,14 +99,11 @@ sudo dnf install pciutils          # Fedora/RHEL
 
 **System instability after changes (rare)**
 ```bash
-# Method 1: Restore from backup
-sudo ./restoreaspmbackup.sh --list
-sudo ./restoreaspmbackup.sh /tmp/aspm_backup_*
 
-# Method 2: Reboot (resets to BIOS defaults)
+# Method 1: Reboot (resets to BIOS defaults)
 sudo reboot
 
-# Method 3: Disable ASPM via kernel parameter
+# Method 2: Disable ASPM via kernel parameter
 # Add to GRUB: pcie_aspm=off
 ```
 
@@ -210,48 +181,20 @@ The script enables ASPM at the **hardware register level** by:
 - **Hardware generation**: Newer devices generally have better ASPM implementation
 - **Device usage patterns**: Devices that frequently idle see more benefit
 
-**Measuring power savings:**
-```bash
-# Before changes
-sudo powertop --html=before.html --time=60
-
-# Apply ASPM
-sudo ./autoaspm.sh
-
-# After changes
-sudo powertop --html=after.html --time=60
-
-# Compare "Package" and "System" power consumption in the HTML reports
-```
-
 ### **Q: My system crashed/hung after enabling ASPM. How do I recover?**
-**A: Reboot or restore from automatic backup or disable via kernel parameter.**
+**A: Reboot or disable via kernel parameter.**
 
 #### **Disable the systemd unit or other boot application of it**
 
 **Method 1: Reboot**
 
-**Method 2: Use automatic backup**
-```bash
-# Boot normally, then restore
-sudo ./restoreaspmbackup.sh --list
-sudo ./restoreaspmbackup.sh /tmp/aspm_backup_YYYYMMDD_HHMMSS
-```
-
-**Method 3: Kernel parameter (if system won't boot normally)**
+**Method 2: Kernel parameter (if system won't boot normally)**
 ```bash
 # Add to kernel command line during boot
 pcie_aspm=off
 
 # Or disable ASPM in BIOS/UEFI if available
 ```
-
-**Method 4: Boot from rescue media**
-```bash
-# Mount your root filesystem and restore backup
-sudo ./restoreaspmbackup.sh /path/to/backup
-```
-
 
 ## License
 
@@ -264,7 +207,7 @@ This software doesn't come with any guarentees and [Author](https://github.com/j
 - **Original bash script**: Luis R. Rodriguez
 - **Python rewrite**: z8
 - **Automatic device detection**: notthebee  
-- **Shell conversion & safety features**: This project
+- **Shell conversion to avoid more dependencies**: This project
 
 ## Additional Resources
 
