@@ -238,7 +238,7 @@ sudo powertop --time=60
 ```
 
 ### **Q: My system crashed/hung after enabling ASPM. How do I recover?**
-**A: Restore from automatic backup or disable via kernel parameter.**
+**A: Reboot or restore from automatic backup or disable via kernel parameter.**
 
 #### **Disable the systemd unit or other boot application of it**
 
