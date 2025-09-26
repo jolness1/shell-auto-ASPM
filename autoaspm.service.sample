@@ -1,0 +1,12 @@
+[Unit]
+Description=Enable PCIe ASPM power management
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/autoaspm-compact.sh
+User=root
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
