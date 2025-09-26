@@ -142,22 +142,6 @@ sudo reboot
 # In GRUB, add: pcie_aspm=off pci=noaer
 ```
 
-## Testing Your System
-
-### Measure Power Impact
-```bash
-# Before changes
-sudo powertop --html=before.html --time=60
-
-# Apply ASPM
-sudo ./autoaspm.sh
-
-# After changes
-sudo powertop --html=after.html --time=60
-
-# Compare the HTML reports
-```
-
 ## Frequently Asked Questions
 
 ### **Q: Do I have to run this after every reboot?**
@@ -228,16 +212,16 @@ The script enables ASPM at the **hardware register level** by:
 
 **Measuring power savings:**
 ```bash
-# Before enabling ASPM
-sudo powertop --time=60
+# Before changes
+sudo powertop --html=before.html --time=60
 
-# Enable ASPM
+# Apply ASPM
 sudo ./autoaspm.sh
 
-# After enabling ASPM  
-sudo powertop --time=60
+# After changes
+sudo powertop --html=after.html --time=60
 
-# Compare "Package" and "System" power consumption
+# Compare "Package" and "System" power consumption in the HTML reports
 ```
 
 ### **Q: My system crashed/hung after enabling ASPM. How do I recover?**
