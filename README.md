@@ -1,6 +1,6 @@
-# Auto-ASPM (jolness1's version)
+# Shell Auto-ASPM
 
-**Automatic ASPM enabler — _Now with 50% less dependencies!_**
+**_Now with 50% less dependencies!_**
 
 ## Requirements
 
