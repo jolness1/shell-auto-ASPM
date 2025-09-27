@@ -36,7 +36,7 @@ sudo ./autoaspm.sh
 ### **Q: Do I have to run this after every reboot?**
 **A: Yes, ASPM changes are runtime-only and reset on reboot.**
 
-PCIe register modifications don't persist across reboots. You have several options the two simplest are:
+PCIe register modifications don't persist across reboots. You have several options — the two simplest are:
 
 **Option 1: Create a systemd service (recommended)**
 To apply ASPM automatically at boot, create a systemd unit using the provided sample `autoaspm.service.sample`.
