@@ -1,4 +1,4 @@
-# Auto-ASPM (Jacob's Version)
+# Auto-ASPM (jolness1's version)
 
 **Automatic ASPM enabler — _Now with 50% less dependencies!_**
 
@@ -81,10 +81,10 @@ This project is released under the BSD 3-Clause License ("New BSD"). See the ful
 
 ## Credits
 
-- **Original bash script**: Luis R. Rodriguez
-- **Python rewrite**: z8
-- **Automatic device detection**: notthebee  
-- **Shell conversion to avoid more dependencies**: This project
+- **Original bash script**: [Luis R. Rodriguez](http://ftp.dei.uc.pt/pub/linux/kernel/people/mcgrof/aspm/enable-aspm)
+- **Python rewrite**: [z8](https://github.com/0x666690/ASPM)
+- **Automatic device detection**: [notthebee](https://github.com/notthebee/AutoASPM)  
+- **Back in Bash**: [Jacob Olness](https://github.com/jolness1/shell-auto-ASPM)
 
 ## Additional Resources
 
