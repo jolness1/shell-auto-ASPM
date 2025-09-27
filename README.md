@@ -79,8 +79,6 @@ echo "@reboot root /path/to/your/autoaspm.sh" | sudo tee -a /etc/crontab
 
 This project is released under the BSD 3-Clause License ("New BSD"). See the full text in the [LICENSE](./LICENSE) file in this repository.
 
-This software doesn't come with any guarentees and [Author](https://github.com/jolness1) accepts no liability. The script is designed to be safe and uses built-in PCIe power management functions but any issues are the sole responsibility of the end-user. 
-
 ## Credits
 
 - **Original bash script**: Luis R. Rodriguez
