@@ -89,6 +89,6 @@ This project is released under the BSD 3-Clause License ("New BSD"). See the ful
 ## Additional Resources
 
 - [PCIe ASPM Documentation](https://www.kernel.org/doc/Documentation/power/pci.rst)
-- [PowerTOP for power analysis](https://01.org/powertop)
-- [PCIe Base Specification](https://pcisig.com/specifications)
 - [Linux PCIe Power Management](https://www.kernel.org/doc/html/latest/power/pci.html)
+- [PowerTOP for easy power savings and analysis](https://github.com/fenrus75/powertop)
+- [PCIe Base Specification](https://pcisig.com/specifications)
