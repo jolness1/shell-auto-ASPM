@@ -31,7 +31,7 @@ sudo ./autoaspm.sh
 ## Frequently Asked Questions
 
 ### **Q: Why not just use [AutoASPM](https://github.com/notthebee/AutoASPM) from Wolfgang?**
-**A: I _try_ to avoid unneccesary packages. I am fine with essentials but using having to install python when this is achievable via shell scripting is something I wanted to avoid.** 
+**A: I _try_ to avoid unneccesary packages. I am fine with essentials but having to install python when this is achievable via shell scripting is something I wanted to avoid.** 
 
 ### **Q: Do I have to run this after every reboot?**
 **A: Yes, ASPM changes are runtime-only and reset on reboot.**
