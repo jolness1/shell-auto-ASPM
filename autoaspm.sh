@@ -1,10 +1,8 @@
 #!/bin/bash
-# Auto-ASPM: Enable PCIe Active State Power Management on supported devices
-# Reduces power consumption by 5-15% by allowing PCIe links to enter low-power states
 # Usage: sudo ./autoaspm-compact.sh [--dry-run]
 
 set -euo pipefail
-# constants
+# consts
 readonly ASPM_DISABLED=0  # 0b00
 readonly ASPM_L0S=1       # 0b01  
 readonly ASPM_L1=2        # 0b10
