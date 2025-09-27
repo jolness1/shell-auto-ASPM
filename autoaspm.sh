@@ -4,8 +4,7 @@
 # Usage: sudo ./autoaspm-compact.sh [--dry-run]
 
 set -euo pipefail
-
-# Constants matching Python ASPM enum
+# constants
 readonly ASPM_DISABLED=0  # 0b00
 readonly ASPM_L0S=1       # 0b01  
 readonly ASPM_L1=2        # 0b10
@@ -13,12 +12,12 @@ readonly ASPM_L0S_L1=3    # 0b11
 
 readonly RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[1;33m' NC='\033[0m'
 
-# Logging functions
+# logging
 log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 
-# Prerequisites check - matches Python exactly
+# prerequisites check
 check_prereqs() {
     if [[ "$(uname -s)" != "Linux" ]]; then
         log_error "This script only runs on Linux-based systems"
@@ -41,35 +40,23 @@ check_prereqs() {
     fi
 }
 
-# Get device name - matches Python exactly
-get_device_name() {
-    local addr="$1"
-    lspci -s "$addr" 2>/dev/null | head -n1
-}
-
-# Read all bytes from device - matches Python read_all_bytes()
+# read all bytes from device
 read_all_bytes() {
     local device="$1"
-    local device_name all_bytes line hex_part
-    
-    device_name=$(get_device_name "$device")
-    
-    # Get raw lspci output
+    local all_bytes line hex_part
     local lspci_output
-    lspci_output=$(lspci -s "$device" -xxx 2>/dev/null)
-    
-    # Process each line, skip the device name line, extract hex bytes
+    lspci_output=$(lspci -s "$device" -xxx 2>/dev/null | sed '1d')
+
     all_bytes=""
     while IFS= read -r line; do
-        if [[ "$line" != *"$device_name"* && "$line" == *": "* ]]; then
-            # Extract hex bytes after the colon, remove spaces - matches Python logic
+        if [[ "$line" == *": "* ]]; then
             hex_part="${line#*: }"
             hex_part="${hex_part// /}"
             all_bytes+="$hex_part"
         fi
     done <<< "$lspci_output"
     
-    # Check minimum length (256 bytes = 512 hex chars) - matches Python
+    # check min length (256 bytes = 512 hex chars)
     if [[ ${#all_bytes} -lt 512 ]]; then
         log_error "Failed to read sufficient bytes from device $device (got ${#all_bytes} chars, need 512)"
         return 1
@@ -78,31 +65,28 @@ read_all_bytes() {
     echo "$all_bytes"
 }
 
-# Convert hex string to decimal
+# convert hex string to decimal
 hex_to_dec() {
     printf "%d" "0x$1"
 }
 
-# Find byte to patch - CORRECTED version of Python find_byte_to_patch()
-# The Python version has a bug where it overwrites pos with bytes[pos]
-# This is the corrected logic that should work
 find_byte_to_patch() {
     local hex_bytes="$1"
     local pos="$2"
     
-    # Get the byte at position pos
+    # get the byte at position pos
     local byte_hex="${hex_bytes:$((pos * 2)):2}"
     local byte_dec
     byte_dec=$(hex_to_dec "$byte_hex")
     
-    if [[ $byte_dec -ne 16 ]]; then  # 0x10 = 16
+    if [[ $byte_dec -ne 16 ]]; then
         find_byte_to_patch "$hex_bytes" $((pos + 1))
     else
-        echo $((pos + 16))  # Found 0x10, return pos + 0x10
+        echo $((pos + 16))
     fi
 }
 
-# Patch byte - matches Python patch_byte() exactly
+# patch byte
 patch_byte() {
     local device="$1"
     local position="$2" 
@@ -115,7 +99,7 @@ patch_byte() {
     setpci -s "$device" "${hex_pos}.B=${hex_val}" 2>/dev/null
 }
 
-# Patch device - matches Python patch_device() exactly
+# patch device
 patch_device() {
     local addr="$1" 
     local aspm_value="$2"
@@ -133,29 +117,25 @@ patch_device() {
         return 1
     }
     
-    # Get current byte value
+    # get current byte value
     byte_hex="${hex_bytes:$((patch_pos * 2)):2}"
     byte_dec=$(hex_to_dec "$byte_hex")
-    current_aspm=$((byte_dec & 3))  # Extract current ASPM bits (0b11 = 3)
+    current_aspm=$((byte_dec & 3))
     
     if [[ $current_aspm -ne $aspm_value ]]; then
-        # Calculate new byte value - matches Python exactly:
-        # patched_byte = patched_byte >> 2
-        # patched_byte = patched_byte << 2  
-        # patched_byte = patched_byte | aspm_value.value
         local patched_byte=$(( ((byte_dec >> 2) << 2) | aspm_value ))
         
         if [[ "$dry_run" == "true" ]]; then
-            log_info "[DRY RUN] Would enable ASPM $(get_aspm_name $aspm_value) for: $addr (current=$(get_aspm_name $current_aspm))"
+            log_info "[DRY RUN] Would enable ASPM $(get_aspm_name "$aspm_value") for: $addr (current=$(get_aspm_name "$current_aspm"))"
         else
             patch_byte "$addr" "$patch_pos" "$patched_byte"
-            log_info "$addr: Enabled ASPM $(get_aspm_name $aspm_value)"
+            log_info "$addr: Enabled ASPM $(get_aspm_name "$aspm_value")"
         fi
     else
         if [[ "$dry_run" == "true" ]]; then
-            log_info "[DRY RUN] Already has ASPM $(get_aspm_name $aspm_value) enabled for: $addr"
+            log_info "[DRY RUN] Already has ASPM $(get_aspm_name "$aspm_value") enabled for: $addr"
         else
-            log_info "$addr: Already has ASPM $(get_aspm_name $aspm_value) enabled"
+            log_info "$addr: Already has ASPM $(get_aspm_name "$aspm_value") enabled"
         fi
     fi
 }
@@ -163,18 +143,17 @@ patch_device() {
 # ASPM name conversion
 get_aspm_name() {
     case $1 in
-        $ASPM_DISABLED) echo "DISABLED" ;;
-        $ASPM_L0S) echo "L0s" ;;
-        $ASPM_L1) echo "L1" ;;
-        $ASPM_L0S_L1) echo "L0sL1" ;;
+        "$ASPM_DISABLED") echo "DISABLED" ;;
+        "$ASPM_L0S") echo "L0s" ;;
+        "$ASPM_L1") echo "L1" ;;
+        "$ASPM_L0S_L1") echo "L0sL1" ;;
         *) echo "UNKNOWN($1)" ;;
     esac
 }
 
-# Parse ASPM mode from string to numeric - matches Python ASPM enum lookup
+# parse ASPM mode from string to numeric
 parse_aspm_mode() {
     local mode="$1"
-    # Remove spaces like Python .replace(" ", "")
     mode="${mode// /}"
     
     case "$mode" in
@@ -188,15 +167,12 @@ parse_aspm_mode() {
     esac
 }
 
-# List supported devices - matches Python list_supported_devices() exactly  
+# list supported devices
 list_supported_devices() {
     local lspci_output
     
-    # Get full lspci output - matches Python subprocess.run("lspci -vv", shell=True, capture_output=True).stdout
+    # full lspci output
     lspci_output=$(lspci -vv 2>/dev/null)
-    
-    # Process the output to match Python's logic exactly
-    # Split by device address and process each block
     echo "$lspci_output" | awk '
     BEGIN { 
         device = ""
@@ -239,12 +215,20 @@ list_supported_devices() {
             aspm_text = substr(block_text, RSTART+5, RLENGTH-5)
             # Remove trailing comma if present
             gsub(/,$/, "", aspm_text)
-            print dev_addr "|" aspm_text
+            # extract first line (header) for a short device description
+            first_nl = index(block_text, "\n")
+            if (first_nl > 0) {
+                header = substr(block_text, 1, first_nl-1)
+            } else {
+                header = block_text
+            }
+            # remove the leading device address and whitespace from header
+            sub(/^[^ ]+ +/, "", header)
+            print dev_addr "|" aspm_text "|" header
         }
     }'
 }
 
-# Show help
 show_help() {
     cat << 'EOF'
 Usage: ./autoaspm_fixed.sh [OPTIONS]
@@ -262,11 +246,10 @@ Examples:
 EOF
 }
 
-# Main function
 main() {
     local dry_run=false
     
-    # Parse arguments
+    # parse args
     while [[ $# -gt 0 ]]; do
         case $1 in
             -h|--help) show_help; exit 0 ;;
@@ -275,10 +258,9 @@ main() {
         esac
     done
     
-    # Run prerequisites - matches Python run_prerequisites()
     check_prereqs
     
-    # Get supported devices - matches Python list_supported_devices()
+    # get supported devices
     mapfile -t devices < <(list_supported_devices)
     
     if [[ ${#devices[@]} -eq 0 ]]; then
@@ -288,13 +270,13 @@ main() {
     
     log_info "Found ${#devices[@]} ASPM-capable device(s)"
     
-    # Process each device - matches Python main() loop
+    # process each device
     for device_info in "${devices[@]}"; do
         if [[ -z "$device_info" ]]; then
             continue
         fi
         
-        IFS='|' read -r device_addr aspm_mode_text <<< "$device_info"
+    IFS='|' read -r device_addr aspm_mode_text device_desc <<< "$device_info"
         
         if [[ -z "$device_addr" || -z "$aspm_mode_text" ]]; then
             log_warn "Skipping malformed device info: '$device_info'"
@@ -304,11 +286,7 @@ main() {
         local aspm_numeric
         aspm_numeric=$(parse_aspm_mode "$aspm_mode_text")
         
-        # Get device description for logging
-        local device_desc
-        device_desc=$(get_device_name "$device_addr" | sed "s/^$device_addr //" 2>/dev/null || echo "Unknown device")
-        
-        log_info "Processing $device_addr ($aspm_mode_text) - $device_desc"
+    log_info "Processing $device_addr ($aspm_mode_text) - ${device_desc:-Unknown device}"
         patch_device "$device_addr" "$aspm_numeric" "$dry_run"
     done
     
@@ -317,5 +295,5 @@ main() {
     fi
 }
 
-# Only run main if script is executed directly (not sourced)
+# only run main if script is executed directly
 [[ "${BASH_SOURCE[0]}" == "${0}" ]] && main "$@"
