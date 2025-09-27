@@ -12,7 +12,7 @@
   sudo apt install pciutils
   
   # Install on RHEL/CentOS/Fedora:  
-  sudo dnf install pciutilsshell-auto-aspm
+  sudo dnf install pciutils
   ```
 
 ## Quick Start
@@ -31,7 +31,7 @@ sudo ./autoaspm.sh
 ## Frequently Asked Questions
 
 ### **Q: Why not just use [AutoASPM](https://github.com/notthebee/AutoASPM) from Wolfgang?**
-**A: I _try_ to avoid unneccesary packages. I am fine with essentials but having to install python when this is achievable via shell scripting is something I wanted to avoid.** 
+**A: There is nothing wrong with the python `autoaspm` script but I _try_ to avoid unneccesary packages. I am fine with essentials but having to install python when this is achievable via shell scripting is something I wanted to avoid.** 
 
 ### **Q: Do I have to run this after every reboot?**
 **A: Yes, ASPM changes are runtime-only and reset on reboot.**
@@ -39,16 +39,17 @@ sudo ./autoaspm.sh
 PCIe register modifications don't persist across reboots. You have several options — the two simplest are:
 
 **Option 1: Create a systemd service (recommended)**
+
 To apply ASPM automatically at boot, create a systemd unit using the provided sample `autoaspm.service.sample`.
 
 Example steps to install the unit:
 
 ```bash
-# Copy the script to a safe location
+# Copy the autoaspm script to a safe location
 sudo cp autoaspm.sh /usr/local/bin/autoaspm.sh
 sudo chmod +x /usr/local/bin/autoaspm.sh
 
-# Copy sample to directory 
+# Copy sample systemd unit to directory 
 sudo cp autoaspm.service.sample /etc/systemd/system/auto-aspm.service
 
 # Enable and start
