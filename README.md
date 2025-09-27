@@ -1,7 +1,6 @@
 # Shell Auto-ASPM
 
-**Automatic PCIe ASPM (Active State Power Management) enabler - Pure shell script, no Python dependency**
-
+**Automatic PCIe ASPM (Active State Power Management) enabler - _Now with 50% less dependencies!_**
 ## Overview
 
 Enable PCIe Active State Power Management (ASPM) on compatible devices to reduce system power consumption. The script scans PCIe devices, and enables supported ASPM link states (L0s/L1) in device configuration space. It does not change CPU governors or BIOS settings.
@@ -114,6 +113,9 @@ sudo reboot
 ```
 
 ## Frequently Asked Questions
+
+### **Q: Why not just use [AutoASPM](https://github.com/notthebee/AutoASPM) from Wolfgang?**
+**A: I run a lot of machines with very minimal installs. I am fine with `pciutils` but using having to install python when this is achievable in `bash` isn't ideal for my usecase.** 
 
 ### **Q: Do I have to run this after every reboot?**
 **A: Yes, ASPM changes are runtime-only and reset on reboot.**
