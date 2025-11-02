@@ -1,5 +1,5 @@
 #!/bin/bash
-# Usage: sudo ./autoaspm-compact.sh [--dry-run]
+# Usage: sudo ./autoaspm.sh [--dry-run]
 
 set -euo pipefail
 # consts
