@@ -4,7 +4,7 @@ After=multi-user.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/autoaspm-compact.sh
+ExecStart=/usr/local/bin/autoaspm.sh
 User=root
 RemainAfterExit=yes
 
