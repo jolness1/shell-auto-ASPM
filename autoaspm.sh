@@ -8,12 +8,16 @@ readonly ASPM_L0S=1       # 0b01
 readonly ASPM_L1=2        # 0b10
 readonly ASPM_L0S_L1=3    # 0b11
 
-readonly RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[1;33m' NC='\033[0m'
+if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
+    readonly RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[1;33m' NC='\033[0m'
+else
+    readonly RED='' GREEN='' YELLOW='' NC=''
+fi
 
 # logging
-log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
-log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
-log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
+log_info() { echo -e "${GREEN}[INFO]${NC} $*"; }
+log_warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
+log_error() { echo -e "${RED}[ERROR]${NC} $*" >&2; }
 
 # prerequisites check
 check_prereqs() {
@@ -22,7 +26,7 @@ check_prereqs() {
         exit 1
     fi
     
-    if [[ $EUID -ne 0 && -z "${SUDO_UID:-}" ]]; then
+    if [[ $EUID -ne 0 ]]; then
         log_error "This script needs root privileges to run"
         exit 1
     fi
@@ -63,28 +67,45 @@ read_all_bytes() {
     echo "$all_bytes"
 }
 
-# convert hex string to decimal
+# convert hex string to decimal (pure bash, no subshell)
 hex_to_dec() {
-    printf "%d" "0x$1"
+    echo $(( 16#$1 ))
 }
 
+# Walk the PCI capabilities linked list to find the PCIe capability (ID 0x10).
+# Returns the offset of the ASPM control register (cap_start + 0x10).
 find_byte_to_patch() {
     local hex_bytes="$1"
     local pos="$2"
-    
-    local byte_hex="${hex_bytes:$((pos * 2)):2}"
-    local byte_dec
-    byte_dec=$(hex_to_dec "$byte_hex")
-    pos="$byte_dec"
-    
-    byte_hex="${hex_bytes:$((pos * 2)):2}"
-    byte_dec=$(hex_to_dec "$byte_hex")
-    
-    if [[ $byte_dec -ne 16 ]]; then
-        find_byte_to_patch "$hex_bytes" $((pos + 1))
-    else
-        echo $((pos + 16))
-    fi
+    local max_caps=48  # PCI spec allows at most 48 capabilities
+    local byte_hex byte_dec i
+
+    for (( i = 0; i < max_caps; i++ )); do
+        # Read the pointer/next-pointer at pos
+        byte_hex="${hex_bytes:$((pos * 2)):2}"
+        byte_dec=$(hex_to_dec "$byte_hex")
+        pos="$byte_dec"
+
+        # A next-pointer of 0 means end of list
+        if [[ $pos -eq 0 ]]; then
+            return 1
+        fi
+
+        # Read the capability ID at this position
+        byte_hex="${hex_bytes:$((pos * 2)):2}"
+        byte_dec=$(hex_to_dec "$byte_hex")
+
+        if [[ $byte_dec -eq 16 ]]; then  # 0x10 = PCI Express
+            echo $((pos + 16))
+            return 0
+        fi
+
+        # Advance to the next-pointer field (cap_start + 1)
+        pos=$((pos + 1))
+    done
+
+    log_error "PCIe capability not found after $max_caps iterations"
+    return 1
 }
 
 # patch byte
@@ -97,7 +118,10 @@ patch_byte() {
     hex_pos=$(printf "%x" "$position")
     hex_val=$(printf "%x" "$value")
     
-    setpci -s "$device" "${hex_pos}.B=${hex_val}" 2>/dev/null
+    if ! setpci -s "$device" "${hex_pos}.B=${hex_val}"; then
+        log_error "setpci failed for device $device at offset 0x${hex_pos}"
+        return 1
+    fi
 }
 
 # patch device
@@ -232,18 +256,17 @@ list_supported_devices() {
 
 show_help() {
     cat << 'EOF'
-Usage: ./autoaspm_fixed.sh [OPTIONS]
+Usage: sudo ./autoaspm.sh [OPTIONS]
 
 Enable PCIe ASPM on supported devices to reduce power consumption.
-Rewritten to match Python version exactly with corrected logic.
 
 OPTIONS:
   -h, --help          Show this help
   -n, --dry-run       Preview changes without applying
 
 Examples:
-    sudo ./autoaspm_fixed.sh --dry-run     # Safe preview
-    sudo ./autoaspm_fixed.sh               # Apply ASPM settings
+    sudo ./autoaspm.sh --dry-run     # Safe preview
+    sudo ./autoaspm.sh               # Apply ASPM settings
 EOF
 }
 
@@ -277,7 +300,7 @@ main() {
             continue
         fi
         
-    IFS='|' read -r device_addr aspm_mode_text device_desc <<< "$device_info"
+        IFS='|' read -r device_addr aspm_mode_text device_desc <<< "$device_info"
         
         if [[ -z "$device_addr" || -z "$aspm_mode_text" ]]; then
             log_warn "Skipping malformed device info: '$device_info'"
@@ -287,7 +310,7 @@ main() {
         local aspm_numeric
         aspm_numeric=$(parse_aspm_mode "$aspm_mode_text")
         
-    log_info "Processing $device_addr ($aspm_mode_text) - ${device_desc:-Unknown device}"
+        log_info "Processing $device_addr ($aspm_mode_text) - ${device_desc:-Unknown device}"
         patch_device "$device_addr" "$aspm_numeric" "$dry_run"
     done
     
