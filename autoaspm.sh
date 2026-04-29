@@ -118,7 +118,7 @@ patch_byte() {
     hex_pos=$(printf "%x" "$position")
     hex_val=$(printf "%x" "$value")
     
-    if ! setpci -s "$device" "${hex_pos}.B=${hex_val}"; then
+    if ! setpci -s "$device" "${hex_pos}.B=${hex_val}" 2>/dev/null; then
         log_error "setpci failed for device $device at offset 0x${hex_pos}"
         return 1
     fi
@@ -153,8 +153,22 @@ patch_device() {
         if [[ "$dry_run" == "true" ]]; then
             log_info "[DRY RUN] Would enable ASPM $(get_aspm_name "$aspm_value") for: $addr (current=$(get_aspm_name "$current_aspm"))"
         else
-            patch_byte "$addr" "$patch_pos" "$patched_byte"
-            log_info "$addr: Enabled ASPM $(get_aspm_name "$aspm_value")"
+            patch_byte "$addr" "$patch_pos" "$patched_byte" || return 1
+            # Verify the write actually persisted; setpci can return 0 even when the
+            # kernel/driver silently rejects the write (e.g. NVIDIA owns the register).
+            local verify_bytes verify_hex verify_byte verify_aspm
+            verify_bytes=$(read_all_bytes "$addr") || {
+                log_warn "$addr: Write sent but could not verify (re-read failed)"
+                return 0
+            }
+            verify_hex="${verify_bytes:$((patch_pos * 2)):2}"
+            verify_byte=$(hex_to_dec "$verify_hex")
+            verify_aspm=$(( verify_byte & 3 ))
+            if [[ $verify_aspm -ne $aspm_value ]]; then
+                log_warn "$addr: Write rejected by kernel/driver — ASPM remains $(get_aspm_name "$verify_aspm") (the device driver may be managing ASPM for this device)"
+            else
+                log_info "$addr: Enabled ASPM $(get_aspm_name "$aspm_value")"
+            fi
         fi
     else
         if [[ "$dry_run" == "true" ]]; then
